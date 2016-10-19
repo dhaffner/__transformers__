@@ -4,25 +4,28 @@ from importlib.machinery import PathFinder, SourceFileLoader
 import sys
 
 
-class NodeVisitor(ast.NodeVisitor):
+class NodeVisitor(ast.NodeTransformer):
     def __init__(self):
-        self._found = []
+        self._found = set()
 
     def visit_ImportFrom(self, node):
         if node.module == '__transformers__':
-            self._found += [name.name for name in node.names
-                            if name.name not in ('_loader', 'setup')]
+            self._found.update(
+                name.name for name in node.names if name.name not in ('_loader', 'setup')
+            )
+        else:
+            return node
 
     @classmethod
-    def get_transformers(cls, tree):
+    def remove_transformers(cls, tree):
         visitor = cls()
-        visitor.visit(tree)
-        return visitor._found
+        tree = visitor.visit(tree)
+        return visitor._found, tree
 
 
 def transform(tree):
     """Apply transformations to ast."""
-    transformers = NodeVisitor.get_transformers(tree)
+    transformers, tree = NodeVisitor.remove_transformers(tree)
 
     for module_name in transformers:
         module = import_module('.{}'.format(module_name), '__transformers__')
@@ -39,15 +42,18 @@ class Finder(PathFinder):
             return None
 
         spec.loader = Loader(spec.loader.name, spec.loader.path)
-        return spec
+        return None
 
 
 class Loader(SourceFileLoader):
     def source_to_code(self, data, path, *, _optimize=-1):
-        tree = ast.parse(data)
-        tree = transform(tree)
-        return compile(tree, path, 'exec',
-                       dont_inherit=True, optimize=_optimize)
+        try:
+            tree = ast.parse(data)
+            tree = transform(tree)
+            return compile(tree, path, 'exec',
+                           dont_inherit=True, optimize=_optimize)
+        except ValueError:
+            return compile(data, path, 'exec', dont_inherit=True, optimize=_optimize)
 
 
 def setup():
