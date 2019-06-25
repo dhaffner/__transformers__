@@ -1,0 +1,9 @@
+  Ideas for a blog post/writeup
+
+  - Benefits of this expanded approach over the initial call-only transform: f(1, ...)
+  - Preserving existing uses of ... -- what are they, how are they affected?
+  - How does code like this get unit tested?
+  - Different replacements: some nodes need a single-depth of search before replacement
+    while some need recursive replacement (e.g. list comprehension)
+
+  https://mail.python.org/pipermail/python-ideas/2016-January/038135.html

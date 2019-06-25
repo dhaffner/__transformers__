@@ -1,5 +1,5 @@
 import ast
-
+import logging
 
 class EllipseReplace(ast.NodeTransformer):
     def __init__(self, replacement=None):
@@ -23,6 +23,7 @@ def ellipsis_in_children(node, recursive=False):
 
 class EllipsisPartialTransformer(ast.NodeTransformer):
     def __init__(self):
+        logging.debug('EllipsisPartialTransformer.__init__')
         self._counter = 0
 
     def _get_arg_name(self):
@@ -37,8 +38,9 @@ class EllipsisPartialTransformer(ast.NodeTransformer):
 
     def _visit(self, node, recursive=False):
         # Does this node's subtree contain an Ellipsis?
+        logging.debug('EllipsisPartialTransformer._visit(%s)', node)
         if ellipsis_in_children(node, recursive=recursive):
-            print('Found ellipsis in', node.__class__.__name__)
+            logging.debug('EllipsisPartialTransformer._visit: ellipsis in %s', node.__class__.__name__)
 
             # If so, wrap it in a lambda and replace all instances of Ellipsis in
             # the entire subtree with the same variable name.
@@ -74,8 +76,13 @@ class EllipsisPartialTransformer(ast.NodeTransformer):
     #   Expressions
     #
 
+    # def generic_visit(self, node):
+    #     print('GENERIC', node)
+    #     return node
+
     def visit_Call(self, node):
-        return self._visit(node)
+        logging.debug('vist_Call(%s)', node)
+        return self._visit(node, recursive=True)
 
     def visit_UnaryOp(self, node):
         return self._visit(node)
@@ -95,9 +102,9 @@ class EllipsisPartialTransformer(ast.NodeTransformer):
     def visit_keyword(self, node):
         return self._visit(node)
 
-    #
-    #   Literals
-    #
+    # #
+    # #   Literals
+    # #
 
     def visit_List(self, node):
         return self._visit(node)
@@ -108,9 +115,9 @@ class EllipsisPartialTransformer(ast.NodeTransformer):
     def visit_Dict(self, node):
         return self._visit(node)
 
-    #
-    #   Comprehensions
-    #
+    # #
+    # #   Comprehensions
+    # #
 
     def visit_ListComp(self, node):
         return self._visit(node, recursive=True)
@@ -127,12 +134,3 @@ class EllipsisPartialTransformer(ast.NodeTransformer):
 
 transformer = EllipsisPartialTransformer()
 
-#   Ideas for a blog post/writeup
-#
-#   - Benefits of this expanded approach over the initial call-only transform: f(1, ...)
-#   - Preserving existing uses of ... -- what are they, how are they affected?
-#   - How does code like this get unit tested?
-#   - Different replacements: some nodes need a single-depth of search before replacement
-#     while some need recursive replacement (e.g. list comprehension)
-#
-#   https://mail.python.org/pipermail/python-ideas/2016-January/038135.html
