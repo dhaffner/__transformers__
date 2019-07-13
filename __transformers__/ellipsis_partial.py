@@ -16,7 +16,7 @@ class EllipseReplace(ast.NodeTransformer):
 def ellipsis_in_children(node, recursive=False):
     return any(
         isinstance(child, ast.Ellipsis) or
-        (recursive is True and ellipsis_in_children(child, recursive=recursive))
+        (recursive and ellipsis_in_children(child, recursive=recursive))
         for child in ast.iter_child_nodes(node)
     )
 
